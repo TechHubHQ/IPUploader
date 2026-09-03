@@ -190,3 +190,10 @@ func NormalizeChoice(entry, raw string) (value string, ok bool) {
 	}
 	return raw, false
 }
+
+// IsChoice reports whether entry is a radio-button field that uses Google's
+// companion sentinel input in a browser submission.
+func IsChoice(entry string) bool {
+	_, ok := choices[entry]
+	return ok
+}

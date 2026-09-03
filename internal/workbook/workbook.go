@@ -145,6 +145,10 @@ func LoadRecords(f *excelize.File, sheets []string) ([]Record, error) {
 			if isBlankRow(row) {
 				continue
 			}
+			if len(row) == 0 || strings.TrimSpace(row[0]) == "" {
+				log.Warnf("%s row %d: skipping record without UHID", sheet, rowNum)
+				continue
+			}
 			values := url.Values{}
 			var uhid string
 			for col, entry := range colToEntry {
