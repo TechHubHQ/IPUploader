@@ -1,0 +1,4 @@
+*.exe
+checkpoints/
+log.log
+logs/
