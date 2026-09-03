@@ -35,7 +35,7 @@ func InitLogger() error {
 	}
 
 	timestamp := time.Now().Format("15-04-05")
-	logFile := filepath.Join(logDir, fmt.Sprintf("auditUploader_%s.log", timestamp))
+	logFile := filepath.Join(logDir, fmt.Sprintf("IPUploader_%s.log", timestamp))
 
 	file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {

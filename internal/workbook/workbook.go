@@ -162,7 +162,10 @@ func LoadRecords(f *excelize.File, sheets []string) ([]Record, error) {
 
 				if entry == formfields.AuditDateEntry {
 					cell = normalizeDate(cell, sheet, rowNum)
-				} else if normalized, ok := formfields.NormalizeChoice(entry, cell); ok {
+				} else if normalized, ok, fuzzy := formfields.NormalizeChoice(entry, cell); ok {
+					if fuzzy {
+						log.Warnf("%s row %d: value %q for %s doesn't match any known option; using nearest match %q", sheet, rowNum, cell, entry, normalized)
+					}
 					cell = normalized
 				} else {
 					log.Warnf("%s row %d: value %q for %s doesn't match any known option; submitting as-is", sheet, rowNum, cell, entry)

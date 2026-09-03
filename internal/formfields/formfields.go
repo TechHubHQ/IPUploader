@@ -174,21 +174,75 @@ var choices = map[string][]string{
 	"entry.1122021611": {"Yes", "No"},     // Documentation without administration
 }
 
-// NormalizeChoice case-insensitively matches raw against the accepted option
-// text for entry, returning the exact casing Google Forms requires. If entry
-// has no known choice set, or raw doesn't match any option, raw is returned
-// unchanged along with ok=false.
-func NormalizeChoice(entry, raw string) (value string, ok bool) {
+// fuzzyEditDistance is the maximum Levenshtein distance allowed when
+// falling back to a nearest-match guess (e.g. "N0" -> "No", "NOO" -> "No").
+const fuzzyEditDistance = 1
+
+// NormalizeChoice matches raw against the accepted option text for entry,
+// returning the exact casing Google Forms requires. It first tries a
+// case-insensitive exact match, then falls back to the nearest option within
+// fuzzyEditDistance edits (only when exactly one option is that close). If
+// entry has no known choice set, raw is returned as-is. If nothing matches,
+// raw is returned unchanged with ok=false and fuzzy=false.
+func NormalizeChoice(entry, raw string) (value string, ok bool, fuzzy bool) {
 	options, known := choices[entry]
 	if !known {
-		return raw, true
+		return raw, true, false
 	}
 	for _, opt := range options {
 		if strings.EqualFold(opt, raw) {
-			return opt, true
+			return opt, true, false
 		}
 	}
-	return raw, false
+
+	best := ""
+	bestDist := -1
+	ambiguous := false
+	rawLower := strings.ToLower(raw)
+	for _, opt := range options {
+		d := levenshtein(rawLower, strings.ToLower(opt))
+		if bestDist == -1 || d < bestDist {
+			bestDist, best, ambiguous = d, opt, false
+		} else if d == bestDist {
+			ambiguous = true
+		}
+	}
+	if bestDist >= 0 && bestDist <= fuzzyEditDistance && !ambiguous {
+		return best, true, true
+	}
+	return raw, false, false
+}
+
+// levenshtein returns the edit distance between a and b.
+func levenshtein(a, b string) int {
+	ra, rb := []rune(a), []rune(b)
+	prev := make([]int, len(rb)+1)
+	curr := make([]int, len(rb)+1)
+	for j := range prev {
+		prev[j] = j
+	}
+	for i := 1; i <= len(ra); i++ {
+		curr[0] = i
+		for j := 1; j <= len(rb); j++ {
+			cost := 1
+			if ra[i-1] == rb[j-1] {
+				cost = 0
+			}
+			del := prev[j] + 1
+			ins := curr[j-1] + 1
+			sub := prev[j-1] + cost
+			m := del
+			if ins < m {
+				m = ins
+			}
+			if sub < m {
+				m = sub
+			}
+			curr[j] = m
+		}
+		prev, curr = curr, prev
+	}
+	return prev[len(rb)]
 }
 
 // IsChoice reports whether entry is a radio-button field that uses Google's
